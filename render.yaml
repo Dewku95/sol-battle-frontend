@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: sol-battle-royale-backend
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: SOLANA_NETWORK
+        value: mainnet-beta
+      - key: PRIVATE_KEY
+        sync: false
+    healthCheckPath: /health
+    autoDeploy: true 
