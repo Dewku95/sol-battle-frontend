@@ -1,35 +1,62 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
+import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
+import { PhantomWalletAdapter } from '@solana/wallet-adapter-wallets';
+import { clusterApiUrl } from '@solana/web3.js';
+import '@solana/wallet-adapter-react-ui/styles.css';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
+
+const wallets = [new PhantomWalletAdapter()];
+const network = clusterApiUrl('mainnet-beta');
+const GAME_WALLET = new PublicKey('46PyYtoqYPZC9yjQwpWYPTQtz9WvCzjeZPjfL1K2RXJU');
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { connection } = useConnection();
+  const { publicKey, sendTransaction } = useWallet();
+
+  const handleJoinMatch = async () => {
+    if (!publicKey) return alert("Connect wallet first");
+
+    const transaction = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: publicKey,
+        toPubkey: GAME_WALLET,
+        lamports: 0.69 * LAMPORTS_PER_SOL,
+      })
+    );
+
+    try {
+      const sig = await sendTransaction(transaction, connection);
+      await connection.confirmTransaction(sig, 'processed');
+      alert("You're in! TX: " + sig);
+
+      // TODO: send to backend → /joinQueue
+    } catch (err) {
+      console.error(err);
+      alert("Payment failed");
+    }
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div>
+      <h1>Sol Battle Royale</h1>
+      <WalletMultiButton />
+      <button onClick={handleJoinMatch}>Join Match (0.69 SOL)</button>
+    </div>
+  );
 }
 
-export default App
+function AppWrapper() {
+  return (
+    <ConnectionProvider endpoint={network}>
+      <WalletProvider wallets={wallets} autoConnect>
+        <WalletModalProvider>
+          <App />
+        </WalletModalProvider>
+      </WalletProvider>
+    </ConnectionProvider>
+  );
+}
+
+export default AppWrapper;
